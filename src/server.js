@@ -95,7 +95,7 @@ app.post("/games", async (req, res) => {
 });
 
 app.get("/games", async (req, res) => {
-  const name = req.query.name;
+  const { name } = req.query;
   try {
     if (!name) {
       const listGames = await connection.query(
@@ -106,7 +106,6 @@ app.get("/games", async (req, res) => {
          ON games."categoryId" = categories.id;`
       );
       return res.status(200).send(listGames.rows);
-
     } else {
       const listGames = await connection.query(
         `SELECT games.*, categories.name 
@@ -119,9 +118,8 @@ app.get("/games", async (req, res) => {
         [`%${name.toLowerCase()}%`]
       );
 
-      if(listGames.rowCount > 0){
-      return res.status(200).send(listGames.rows);
-
+      if (listGames.rowCount > 0) {
+        return res.status(200).send(listGames.rows);
       } else {
         return res.status(200).send("Não foi possível encontrar o jogo.");
       }
@@ -131,5 +129,58 @@ app.get("/games", async (req, res) => {
   }
 });
 
+app.post("/customers", async (req, res) => {
+  const { name, phone, cpf, birthday } = req.body;
+
+  pkg.types.setTypeParser(1082, function (birthday) {
+    return birthday;
+  });
+
+  try {
+    const existCustomerCPF = await connection.query(
+      `SELECT * FROM customers
+       WHERE cpf = $1`,
+      [cpf]
+    );
+
+    if(existCustomerCPF.rows.length > 0){
+      return res.status(409).send("CPF já foi cadastrado.")
+    }
+
+    if (name.length < 4) {
+      return res.status(400).send("Precisa ter no mínimo 4 caracteres.");
+    }
+
+    if (name === "") {
+      return res.status(400).send("Não pode cadastrar um nome vazio.");
+    }
+
+    if (phone.toString().length > 11 || phone.toString().length < 10) {
+      return res
+        .status(400)
+        .send("O telefone deve conter entre 10 ~ 11 caracteres.");
+    }
+
+    if (cpf.toString().length > 11 || cpf.toString().length < 11) {
+      return res.status(400).send("O cpf deve conter 11 caracteres.");
+    }
+
+    await connection.query(
+      `INSERT INTO customers (name, phone, cpf, birthday)
+       VALUES ($1, $2, $3, $4)`,
+      [name, phone, cpf, birthday]
+    );
+
+    res.sendStatus(201);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.get("/customers", async (req, res) => {
+  const listCustomers = await connection.query(`SELECT * FROM customers;`);
+  res.status(200).send(listCustomers.rows);
+});
+
 const port = 4000;
-app.listen(port, () => console.log(`Server running in port ${port}`));
+app.listen(port, () => console.log(`Server running in port ${port}.`));
