@@ -19,7 +19,8 @@ app.post("/categories", async (req, res) => {
 
   try {
     const existCategoryName = await connection.query(
-      "SELECT * FROM categories WHERE name = $1",
+      `SELECT * FROM categories 
+       WHERE name = $1;`,
       [name]
     );
 
@@ -31,7 +32,11 @@ app.post("/categories", async (req, res) => {
       return res.status(400).send("Não pode cadastrar um nome vazio.");
     }
 
-    await connection.query("INSERT INTO categories (name) VALUES ($1)", [name]);
+    await connection.query(
+      `INSERT INTO categories (name) 
+       VALUES ($1);`,
+      [name]
+    );
 
     return res.sendStatus(201);
   } catch (err) {
@@ -41,7 +46,7 @@ app.post("/categories", async (req, res) => {
 
 app.get("/categories", async (req, res) => {
   const listGamesCategories = await connection.query(
-    "SELECT * FROM categories"
+    `SELECT * FROM categories;`
   );
 
   return res.status(200).send(listGamesCategories.rows);
@@ -51,11 +56,13 @@ app.post("/games", async (req, res) => {
   const { name, image, stockTotal, categoryId, pricePerDay } = req.body;
   try {
     const existGameName = await connection.query(
-      "SELECT * FROM games WHERE name = $1",
+      `SELECT * FROM games 
+       WHERE name = $1;`,
       [name]
     );
     const existCategoryId = await connection.query(
-      "SELECT * FROM categories WHERE id=$1",
+      `SELECT * FROM categories 
+       WHERE id = $1;`,
       [categoryId]
     );
 
@@ -76,7 +83,8 @@ app.post("/games", async (req, res) => {
     }
 
     await connection.query(
-      'INSERT INTO games (name, image, "stockTotal", "categoryId", "pricePerDay") VALUES ($1, $2, $3, $4, $5)',
+      `INSERT INTO games (name, image, "stockTotal", "categoryId", "pricePerDay") 
+       VALUES ($1, $2, $3, $4, $5);`,
       [name, image, stockTotal, categoryId, pricePerDay]
     );
 
@@ -87,9 +95,40 @@ app.post("/games", async (req, res) => {
 });
 
 app.get("/games", async (req, res) => {
-  const listGames = await connection.query(`SELECT * FROM games`);
+  const name = req.query.name;
+  try {
+    if (!name) {
+      const listGames = await connection.query(
+        `SELECT games.*, categories.name 
+         AS "categoryName" 
+         FROM games 
+         JOIN categories 
+         ON games."categoryId" = categories.id;`
+      );
+      return res.status(200).send(listGames.rows);
 
-  return res.status(200).send(listGames.rows);
+    } else {
+      const listGames = await connection.query(
+        `SELECT games.*, categories.name 
+         AS "categoryName" 
+         FROM games 
+         JOIN categories 
+         ON games."categoryId" = categories.id 
+         WHERE LOWER(games.name)
+         LIKE $1;`,
+        [`%${name.toLowerCase()}%`]
+      );
+
+      if(listGames.rowCount > 0){
+      return res.status(200).send(listGames.rows);
+
+      } else {
+        return res.status(200).send("Não foi possível encontrar o jogo.");
+      }
+    }
+  } catch (err) {
+    return res.status(500).send(err);
+  }
 });
 
 const port = 4000;
