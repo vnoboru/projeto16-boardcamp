@@ -132,10 +132,6 @@ app.get("/games", async (req, res) => {
 app.post("/customers", async (req, res) => {
   const { name, phone, cpf, birthday } = req.body;
 
-  pkg.types.setTypeParser(1082, function (birthday) {
-    return birthday;
-  });
-
   try {
     const existCustomerCPF = await connection.query(
       `SELECT * FROM customers
@@ -143,8 +139,8 @@ app.post("/customers", async (req, res) => {
       [cpf]
     );
 
-    if(existCustomerCPF.rows.length > 0){
-      return res.status(409).send("CPF já foi cadastrado.")
+    if (existCustomerCPF.rows.length > 0) {
+      return res.status(409).send("CPF já foi cadastrado.");
     }
 
     if (name.length < 4) {
@@ -178,8 +174,46 @@ app.post("/customers", async (req, res) => {
 });
 
 app.get("/customers", async (req, res) => {
+  pkg.types.setTypeParser(1082, function (birthday) {
+    return birthday;
+  });
+
   const listCustomers = await connection.query(`SELECT * FROM customers;`);
   res.status(200).send(listCustomers.rows);
+});
+
+app.put("/customers/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, phone, cpf, birthday } = req.body;
+
+  try {
+    if (name.length < 4) {
+      return res.status(400).send("Precisa ter no mínimo 4 caracteres.");
+    }
+
+    if (name === "") {
+      return res.status(400).send("Não pode cadastrar um nome vazio.");
+    }
+
+    if (phone.toString().length > 11 || phone.toString().length < 10) {
+      return res
+        .status(400)
+        .send("O telefone deve conter entre 10 ~ 11 caracteres.");
+    }
+
+    if (cpf.toString().length > 11 || cpf.toString().length < 11) {
+      return res.status(400).send("O cpf deve conter 11 caracteres.");
+    }
+
+    await connection.query(
+      `UPDATE customers 
+      SET name = $1, phone = $2, cpf = $3, birthday = $4
+      WHERE id = $5`,
+      [name, phone, cpf, birthday, id]
+    );
+
+    res.sendStatus(200);
+  } catch {}
 });
 
 const port = 4000;
