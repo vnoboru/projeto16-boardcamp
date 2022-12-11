@@ -36,12 +36,16 @@ export async function postCategories(req, res) {
 }
 
 export async function getCategories(req, res) {
-  const listGamesCategories = await connection.query(
-    `
+  try {
+    const listGamesCategories = await connection.query(
+      `
     SELECT * 
     FROM categories;
     `
-  );
+    );
 
-  return res.status(200).send(listGamesCategories.rows);
+    return res.status(200).send(listGamesCategories.rows);
+  } catch (err) {
+    res.status(500).send(err);
+  }
 }

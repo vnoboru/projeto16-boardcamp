@@ -1,5 +1,6 @@
 import pkg from "pg";
 import connection from "../db.js";
+import moment from "moment";
 
 export async function postCustomers(req, res) {
   const { name, phone, cpf, birthday } = req.body;
@@ -20,12 +21,61 @@ export async function postCustomers(req, res) {
 }
 
 export async function getCustomers(req, res) {
+  const { cpf } = req.query;
+
   pkg.types.setTypeParser(1082, function (birthday) {
-    return birthday;
+    return String(birthday);
   });
 
-  const listCustomers = await connection.query(`SELECT * FROM customers;`);
-  res.status(200).send(listCustomers.rows);
+  try {
+    if (cpf) {
+      const listCustomersCPF = await connection.query(
+        `
+        SELECT *
+        FROM customers
+        WHERE customers.cpf
+        LIKE $1
+        `,
+        [`%${cpf}%`]
+      );
+
+      res.status(200).send(listCustomersCPF.rows);
+    }
+
+    const listCustomers = await connection.query(
+      `
+      SELECT * 
+      FROM customers;
+      `
+    );
+
+    res.status(200).send(listCustomers.rows);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+}
+
+export async function getCustomersSearch(req, res) {
+  const { id } = req.params;
+
+  try {
+    const existCustomerId = await connection.query(
+      `
+      SELECT *
+      FROM customers
+      WHERE id = $1
+      `,
+      [id]
+    );
+
+    if (existCustomerId.rows.length === 0) {
+      return res.status(404).send("Usuário não foi encontrado.");
+    }
+
+    res.status(200).send(existCustomerId.rows[0]);
+  } catch (err) {
+    res.status(500).send(err);
+  }
 }
 
 export async function putCustomers(req, res) {

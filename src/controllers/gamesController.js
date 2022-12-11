@@ -28,7 +28,7 @@ export async function getGames(req, res) {
         SELECT games.*, categories.name 
         AS "categoryName" 
         FROM games 
-        JOIN categories 
+        JOIN categories
         ON games."categoryId" = categories.id;
         `
       );
