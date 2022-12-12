@@ -82,6 +82,20 @@ export async function putCustomers(req, res) {
   const { name, phone, cpf, birthday } = req.body;
 
   try {
+    const existCustomerCPF = await connection.query(
+      `
+      SELECT * 
+      FROM customers
+      WHERE cpf = $1 
+      AND NOT id = $2
+      `,
+      [cpf, id]
+    );
+
+    if (existCustomerCPF.rows.length > 0) {
+      return res.status(409).send("O CPF já foi cadastrado.");
+    }
+
     await connection.query(
       `
     UPDATE customers 
