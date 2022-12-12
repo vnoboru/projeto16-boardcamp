@@ -1,6 +1,5 @@
 import pkg from "pg";
 import connection from "../db.js";
-import moment from "moment";
 
 export async function postCustomers(req, res) {
   const { name, phone, cpf, birthday } = req.body;
@@ -39,7 +38,7 @@ export async function getCustomers(req, res) {
         [`%${cpf}%`]
       );
 
-      res.status(200).send(listCustomersCPF.rows);
+      return res.status(200).send(listCustomersCPF.rows);
     }
 
     const listCustomers = await connection.query(
@@ -59,7 +58,7 @@ export async function getCustomersSearch(req, res) {
   const { id } = req.params;
 
   try {
-    const existCustomerId = await connection.query(
+    let existCustomerId = await connection.query(
       `
       SELECT *
       FROM customers
