@@ -40,58 +40,79 @@ export async function postRentals(req, res) {
 }
 
 export async function getRentals(req, res) {
+  const { customerId, gameId } = req.query;
+
   pkg.types.setTypeParser(1082, function (birthday) {
     return String(birthday);
   });
 
-  const listRentals = await connection.query(
-    `
-    SELECT rentals.*, 
-      games.id as "gameId", 
-      games.name as "gameName", 
-      games."categoryId" as "gameCategoryId", 
-      customers.name as "customerName", 
-      customers.id as "customerId", 
-      categories.id as "categoryId", 
-      categories.name as "categoryName" 
-    FROM rentals
-    JOIN games
-    ON rentals."gameId" = games.id
-    JOIN customers
-    ON rentals."customerId" = customers.id
-    JOIN categories
-    ON games."categoryId" = categories.id
-    `
-  );
+  const code = `
+  SELECT rentals.*, 
+    games.id as "gameId", 
+    games.name as "gameName", 
+    games."categoryId" as "gameCategoryId", 
+    customers.name as "customerName", 
+    customers.id as "customerId", 
+    categories.id as "categoryId", 
+    categories.name as "categoryName" 
+  FROM rentals
+  JOIN games
+  ON rentals."gameId" = games.id
+  JOIN customers
+  ON rentals."customerId" = customers.id
+  JOIN categories
+  ON games."categoryId" = categories.id
+  `;
 
-  if (listRentals.rows.length == 0) {
-    res.status(404).send("no rentals information");
-    return;
+  try {
+    let listRentals;
+    if (!customerId && !gameId) {
+      listRentals = await connection.query(code);
+    } else if (customerId && !gameId) {
+      listRentals = await connection.query(
+        `
+        ${code}
+        WHERE rentals."customerId" = $1;
+        `,
+        [customerId]
+      );
+    } else if (!customerId && gameId) {
+      listRentals = await connection.query(
+        `
+        ${code}
+        WHERE rentals."gameId" = $1;
+        `,
+        [gameId]
+      );
+    }
+
+    const rentals = listRentals.rows.map((r) => {
+      return {
+        id: r.id,
+        customerId: r.customerId,
+        gameId: r.gameId,
+        rentDate: r.rentDate,
+        daysRented: r.daysRented,
+        returnDate: r.returnDate,
+        originalPrice: r.originalPrice,
+        delayFee: r.delayFee,
+        game: {
+          id: r.gameId,
+          name: r.gameName,
+          categoryId: r.categoryId,
+          categoryName: r.categoryName,
+        },
+        customer: {
+          id: r.customerId,
+          name: r.customerName,
+        },
+      };
+    });
+
+    return res.send(rentals);
+  } catch (err) {
+    res.status(500).send(err);
   }
-  const rentals = listRentals.rows.map((r) => {
-    return {
-      id: r.id,
-      customerId: r.customerId,
-      gameId: r.gameId,
-      rentDate: r.rentDate,
-      daysRented: r.daysRented,
-      returnDate: r.returnDate,
-      originalPrice: r.originalPrice,
-      delayFee: r.delayFee,
-      game: {
-        id: r.gameId,
-        name: r.gameName,
-        categoryId: r.categoryId,
-        categoryName: r.categoryName,
-      },
-      customer: {
-        id: r.customerId,
-        name: r.customerName,
-      },
-    };
-  });
-
-  res.status(200).send(rentals);
 }
 
 export async function postFinishRentals(req, res) {
@@ -114,7 +135,7 @@ export async function postFinishRentals(req, res) {
     `,
     [rental.rows[0].gameId]
   );
-  
+
   try {
     let delay;
     const initialDay = new Date(rental.rows[0].rentDate).getTime();
