@@ -39,7 +39,7 @@ export async function postGamesValidation(req, res, next) {
       return res.status(409).send("Nome de jogo já existente.");
     }
   } catch (err) {
-    res.status(500).send(err);
+    return res.status(500).send(err);
   }
 
   next();

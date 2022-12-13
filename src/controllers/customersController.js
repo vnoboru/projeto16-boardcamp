@@ -13,9 +13,9 @@ export async function postCustomers(req, res) {
       [name, phone, cpf, birthday]
     );
 
-    res.sendStatus(201);
+    return res.sendStatus(201);
   } catch (err) {
-    res.status(500).send(err);
+    return res.status(500).send(err);
   }
 }
 
@@ -48,9 +48,9 @@ export async function getCustomers(req, res) {
       `
     );
 
-    res.status(200).send(listCustomers.rows);
+    return res.status(200).send(listCustomers.rows);
   } catch (err) {
-    res.status(500).send(err);
+    return res.status(500).send(err);
   }
 }
 
@@ -82,31 +82,30 @@ export async function putCustomers(req, res) {
   const { name, phone, cpf, birthday } = req.body;
 
   try {
-    const existCustomerCPF = await connection.query(
+    const existCpf = await connection.query(
       `
       SELECT * 
-      FROM customers
+      FROM customers 
       WHERE cpf = $1 
-      AND NOT id = $2
+      AND id <> $2
       `,
       [cpf, id]
     );
+    if (existCpf.rows.length === 0) {
+      await connection.query(
+        `
+      UPDATE customers 
+      SET name = $1, phone = $2, cpf = $3, birthday = $4
+      WHERE id = $5
+      `,
+        [name, phone, cpf, birthday, id]
+      );
 
-    if (existCustomerCPF.rows.length > 0) {
-      return res.status(409).send("O CPF já foi cadastrado.");
+      return res.sendStatus(200);
+    } else {
+      return res.status(409).send("CPF já foi cadastrado.");
     }
-
-    await connection.query(
-      `
-    UPDATE customers 
-    SET name = $1, phone = $2, cpf = $3, birthday = $4
-    WHERE id = $5
-    `,
-      [name, phone, cpf, birthday, id]
-    );
-
-    res.sendStatus(200);
   } catch (err) {
-    res.status(500).send(err);
+    return res.status(500).send(err);
   }
 }

@@ -36,7 +36,6 @@ export async function postCustomersValidation(req, res, next) {
 
 export async function putCustomersValidation(req, res, next) {
   const { name, phone, cpf, birthday } = req.body;
-  const { id } = req.params;
 
   const validation = customersSchema.validate(
     { name, phone, cpf, birthday },

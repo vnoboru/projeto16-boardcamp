@@ -14,7 +14,23 @@ export async function postRentals(req, res) {
       WHERE id = $1
       `,
       [gameId]
+    );    
+    
+    const pricePerDay1 = await connection.query(
+      `
+      SELECT *
+      FROM games
+      WHERE id = $1
+      `,
+      [gameId]
     );
+    console.log(pricePerDay1.rows[0].id);
+
+    await connection.query(
+      `UPDATE games SET "stockTotal" = "stockTotal" - 1 WHERE id = $1`,
+      [pricePerDay1.rows[0].id]
+    );
+
     const originalPrice = daysRented * pricePerDay.rows[0].pricePerDay;
 
     await connection.query(
@@ -111,7 +127,7 @@ export async function getRentals(req, res) {
 
     return res.send(rentals);
   } catch (err) {
-    res.status(500).send(err);
+    return res.status(500).send(err);
   }
 }
 
@@ -157,14 +173,15 @@ export async function postFinishRentals(req, res) {
       'UPDATE rentals SET "returnDate" = $1, "delayFee" = $2 WHERE id = $3',
       [today, delay, id]
     );
+
     await connection.query(
       `UPDATE games SET "stockTotal" = "stockTotal" + 1 WHERE id = $1`,
       [rental.rows[0].gameId]
     );
 
-    res.sendStatus(200);
+    return res.sendStatus(200);
   } catch (err) {
-    res.status(500).send(err);
+    return res.status(500).send(err);
   }
 }
 
@@ -179,8 +196,9 @@ export async function deleteRentals(req, res) {
       `,
       [id]
     );
-    res.status(200).send("Deletado com sucesso.");
+
+    return res.status(200).send("Deletado com sucesso.");
   } catch (err) {
-    res.status(500).send(err);
+    return res.status(500).send(err);
   }
 }

@@ -77,7 +77,7 @@ export async function rentalsReturnValidation(req, res, next) {
       return res.sendStatus(400);
     }
   } catch (err) {
-    res.status(500).send(err);
+    return res.status(500).send(err);
   }
 
   next();
@@ -103,7 +103,7 @@ export async function rentalsDeleteValidation(req, res, next) {
       return res.sendStatus(400);
     }
   } catch (err) {
-    res.status(500).send(err);
+    return res.status(500).send(err);
   }
 
   next();

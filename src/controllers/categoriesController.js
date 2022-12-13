@@ -46,6 +46,6 @@ export async function getCategories(req, res) {
 
     return res.status(200).send(listGamesCategories.rows);
   } catch (err) {
-    res.status(500).send(err);
+    return res.status(500).send(err);
   }
 }
