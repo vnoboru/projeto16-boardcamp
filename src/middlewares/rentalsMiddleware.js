@@ -56,3 +56,55 @@ export async function postRentalsValidation(req, res, next) {
 
   next();
 }
+
+export async function rentalsReturnValidation(req, res, next) {
+  const { id } = req.params;
+
+  try {
+    const existRentalId = await connection.query(
+      `
+        SELECT * FROM rentals
+        WHERE id = $1
+        `,
+      [id]
+    );
+
+    if (existRentalId.rows.length === 0) {
+      return res.status(404).send("Id fornecido inexistente.");
+    }
+
+    if (existRentalId.rows[0].returnDate) {
+      return res.sendStatus(400);
+    }
+  } catch (err) {
+    res.status(500).send(err);
+  }
+
+  next();
+}
+
+export async function rentalsDeleteValidation(req, res, next) {
+  const { id } = req.params;
+
+  try {
+    const existRentalId = await connection.query(
+      `
+      SELECT * FROM rentals
+      WHERE id = $1
+      `,
+      [id]
+    );
+
+    if (existRentalId.rows.length === 0) {
+      return res.status(404).send("Id fornecido inexistente.");
+    }
+
+    if (existRentalId.rows[0].returnDate === null) {
+      return res.sendStatus(400);
+    }
+  } catch (err) {
+    res.status(500).send(err);
+  }
+
+  next();
+}

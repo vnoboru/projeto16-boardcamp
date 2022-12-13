@@ -94,26 +94,63 @@ export async function getRentals(req, res) {
   res.status(200).send(rentals);
 }
 
+export async function postFinishRentals(req, res) {
+  const { id } = req.params;
+  const today = dayjs().format("YYYY-MM-DD");
+  const rental = await connection.query(
+    `
+    SELECT *
+    FROM rentals
+    WHERE id = $1
+    `,
+    [id]
+  );
+
+  const game = await connection.query(
+    `
+    SELECT * 
+    FROM games
+    WHERE id = $1
+    `,
+    [rental.rows[0].gameId]
+  );
+  
+  try {
+    let delay;
+    const initialDay = new Date(rental.rows[0].rentDate).getTime();
+    const todayDay = new Date(today).getTime();
+    const millisecondsDay = 86400000;
+    const rentalDay = rental.rows[0].daysRented;
+    const gameDay = game.rows[0].pricePerDay;
+
+    const daysPassed =
+      Math.ceil((todayDay - initialDay) / millisecondsDay) - rentalDay;
+
+    if (daysPassed <= 0) {
+      delay = 0;
+    } else {
+      delay = daysPassed * gameDay;
+    }
+
+    await connection.query(
+      'UPDATE rentals SET "returnDate" = $1, "delayFee" = $2 WHERE id = $3',
+      [today, delay, id]
+    );
+    await connection.query(
+      `UPDATE games SET "stockTotal" = "stockTotal" + 1 WHERE id = $1`,
+      [rental.rows[0].gameId]
+    );
+
+    res.sendStatus(200);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+}
+
 export async function deleteRentals(req, res) {
   const { id } = req.params;
 
   try {
-    const existRentalId = await connection.query(
-      `
-      SELECT * FROM rentals
-      WHERE id = $1
-      `,
-      [id]
-    );
-
-    if (existRentalId.rows.length === 0) {
-      return res.status(404).send("Id fornecido inexistente.");
-    }
-
-    if (rental.rows[0].returnData !== null) {
-      return res.status(400).send("Aluguel não finalizado.");
-    }
-    
     await connection.query(
       `
       DELETE FROM rentals
